@@ -6,7 +6,7 @@ public class MainApplication {
         QueryHandler searcher = new QueryHandler();
         System.out.println();
         indexer.indexMethod();
-        searcher.searchMethod();
+        searcher.queryIndex();
         
         System.out.println("Evalutaing Scores: trec_eval");
     }

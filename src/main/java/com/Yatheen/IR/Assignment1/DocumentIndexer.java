@@ -74,8 +74,9 @@ public class DocumentIndexer {
         		
         		IndexWriterConfig indexConfig = new IndexWriterConfig(analyzer);
         		
-        		indexConfig.setSimilarity(new ClassicSimilarity());
-        		//indexConfig.setSimilarity(new BM25Similarity());
+        		//indexConfig.setSimilarity(new LMDirichletSimilarity());
+        		//indexConfig.setSimilarity(new ClassicSimilarity());
+        		indexConfig.setSimilarity(new BM25Similarity());
         		//indexConfig.setSimilarity(new MultiSimilarity(new Similarity[]{new BM25Similarity(),new ClassicSimilarity()}));
         		
         		indexConfig.setOpenMode(OpenMode.CREATE);
@@ -92,54 +93,6 @@ public class DocumentIndexer {
         		System.out.println("Completed Indexing in "+(endTime.getTime() - startTime.getTime()) +" milliseconds");
         		System.out.println("=========================================================");
         	}
-//            Directory englishIndexDir = FSDirectory.open(Paths.get(englishIndexPath));
-//            Directory standardIndexDir = FSDirectory.open(Paths.get(standardIndexPath));
-//
-//            //Analyzer analyzer = new SimpleAnalyzer();
-//            //Analyzer analyzer = new WhitespaceAnalyzer();
-//            Analyzer standardAnalyzer = new StandardAnalyzer();
-//            Analyzer englishAnalyser = new EnglishAnalyzer();
-//
-//			IndexWriterConfig indexWriterConfigEnglish = new IndexWriterConfig(englishAnalyser);
-//            IndexWriterConfig indexWriterConfigStandard = new IndexWriterConfig(standardAnalyzer);
-//
-//            //BM25 Similarity
-//            //iwc.setSimilarity(new BM25Similarity());
-//
-//            //Classic Similarity
-//            //iwc.setSimilarity(new ClassicSimilarity());
-//
-//            //LMDirichletSimilarity
-//            //iwc.setSimilarity(new LMDirichletSimilarity());
-//
-//            //Trying a multi similarity model
-//            indexWriterConfigEnglish.setSimilarity(new MultiSimilarity(new Similarity[]{new BM25Similarity(),new ClassicSimilarity()}));
-//            indexWriterConfigStandard.setSimilarity(new MultiSimilarity(new Similarity[]{new BM25Similarity(),new ClassicSimilarity()}));
-//
-//            //Trying another multi similarity model
-//            //iwc.setSimilarity(new MultiSimilarity(new Similarity[]{new BM25Similarity(),new LMDirichletSimilarity()}));
-//
-//            //Trying another multi similarity model
-//            //iwc.setSimilarity(new MultiSimilarity(new Similarity[]{new ClassicSimilarity(),new LMDirichletSimilarity()}));
-//
-//            indexWriterConfigEnglish.setOpenMode(OpenMode.CREATE);
-//            indexWriterConfigStandard.setOpenMode(OpenMode.CREATE);
-//
-//            IndexWriter indexWriterEnglish = new IndexWriter(englishIndexDir, indexWriterConfigEnglish);
-//            IndexWriter indexWriterStandard = new IndexWriter(standardIndexDir, indexWriterConfigStandard);
-//            
-//            indexDoc(indexWriterEnglish, datasetDirectory);
-//            indexDoc(indexWriterStandard, datasetDirectory);
-//
-//            //Using writer.forceMerge to maximise search performance.
-//            indexWriterEnglish.forceMerge(1);
-//            indexWriterStandard.forceMerge(1);
-//
-//            indexWriterEnglish.close();
-//            indexWriterStandard.close();
-//
-//            Date end = new Date();
-//            System.out.println(end.getTime() - start.getTime() + " total milliseconds");
 
         } catch (IOException e) {
             System.out.println(" caught a " + e.getClass() + "\n with message: " + e.getMessage());
