@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
+import java.util.*;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.core.SimpleAnalyzer;
@@ -24,95 +25,138 @@ import org.apache.lucene.store.FSDirectory;
 
 public class DocumentIndexer {
 
-    /** Index all text files under a directory. */
+    private static HashMap<String,Analyzer> analyzers;
+	private static String[] INDEX_PATHS;
+	private static String datasetPath = "cran/cran.all.1400";
+	
+	DocumentIndexer(){
+		analyzers = new HashMap<String,Analyzer>();
+		analyzers.put("WhitespaceAnalyzer",new WhitespaceAnalyzer());
+		analyzers.put("SimpleAnalyzer",new SimpleAnalyzer());
+		analyzers.put("StandardAnalyzer",new StandardAnalyzer());
+		analyzers.put("EnglishAnalyzer",new EnglishAnalyzer());
+		
+		INDEX_PATHS  = new String[]{
+				"INDEX/WHITESPACE_ANALYZER",
+				"INDEX/SIMPLE_ANALYZER",
+				"INDEX/STANDARD_ANALYZER",
+				"INDEX/ENGLISH_ANALYZER"
+		};
+	}
+	
+	public static HashMap<String, Analyzer> getAnalyzers() {
+		return analyzers;
+	}
+
+	public static String[] getINDEX_PATHS() {
+		return INDEX_PATHS;
+	}
+	
+	private static Path datasetDirectory = Paths.get(datasetPath);
+	
     public void indexMethod() {
-        String englishIndexPath = "INDEX/ENGLISH_ANALYZER";
-        String standardIndexPath = "INDEX/STANDARD_ANALYZER";
-        String docsPath = "cran/cran.all.1400";
 
-        final Path docDir = Paths.get(docsPath);
-
-        if (!Files.isReadable(docDir)) {
-            System.out.println("Document directory '" + docDir.toAbsolutePath() + "' does not exist or is not readable, please check the path");
+        if (!Files.isReadable(datasetDirectory)) {
+            System.out.println("Document directory '" + datasetDirectory.toAbsolutePath() + "' does not exist or is not readable, please check the path");
             System.exit(1);
         }
 
-        Date start = new Date();
+        
         try {
-
-            Directory englishIndexDir = FSDirectory.open(Paths.get(englishIndexPath));
-            Directory standardIndexDir = FSDirectory.open(Paths.get(standardIndexPath));
-
-            //Analyzer analyzer = new SimpleAnalyzer();
-            //Analyzer analyzer = new WhitespaceAnalyzer();
-            Analyzer standardAnalyzer = new StandardAnalyzer();
-            Analyzer englishAnalyser = new EnglishAnalyzer();
-
-			IndexWriterConfig indexWriterConfigEnglish = new IndexWriterConfig(englishAnalyser);
-            IndexWriterConfig indexWriterConfigStandard = new IndexWriterConfig(standardAnalyzer);
-
-            //BM25 Similarity
-            //iwc.setSimilarity(new BM25Similarity());
-
-            //Classic Similarity
-            //iwc.setSimilarity(new ClassicSimilarity());
-
-            //LMDirichletSimilarity
-            //iwc.setSimilarity(new LMDirichletSimilarity());
-
-            //Trying a multi similarity model
-            indexWriterConfigEnglish.setSimilarity(new MultiSimilarity(new Similarity[]{new BM25Similarity(),new ClassicSimilarity()}));
-            indexWriterConfigStandard.setSimilarity(new MultiSimilarity(new Similarity[]{new BM25Similarity(),new ClassicSimilarity()}));
-
-            //Trying another multi similarity model
-            //iwc.setSimilarity(new MultiSimilarity(new Similarity[]{new BM25Similarity(),new LMDirichletSimilarity()}));
-
-            //Trying another multi similarity model
-            //iwc.setSimilarity(new MultiSimilarity(new Similarity[]{new ClassicSimilarity(),new LMDirichletSimilarity()}));
-
-            indexWriterConfigEnglish.setOpenMode(OpenMode.CREATE);
-            indexWriterConfigStandard.setOpenMode(OpenMode.CREATE);
-
-            IndexWriter indexWriterEnglish = new IndexWriter(englishIndexDir, indexWriterConfigEnglish);
-            IndexWriter indexWriterStandard = new IndexWriter(standardIndexDir, indexWriterConfigStandard);
-            
-            indexDoc(indexWriterEnglish, docDir);
-            indexDoc(indexWriterStandard, docDir);
-
-            //Using writer.forceMerge to maximise search performance.
-            indexWriterEnglish.forceMerge(1);
-            indexWriterStandard.forceMerge(1);
-
-            indexWriterEnglish.close();
-            indexWriterStandard.close();
-
-            Date end = new Date();
-            System.out.println(end.getTime() - start.getTime() + " total milliseconds");
+        	int counter = 0;
+        	for(String currentAnalyzer: analyzers.keySet()) {
+        		System.out.println("Indexing the corpus using: "+currentAnalyzer);
+        		Date startTime = new Date();
+        		
+        		Directory indexDir = FSDirectory.open(Paths.get(INDEX_PATHS[counter++]));
+        		
+        		Analyzer analyzer = analyzers.get(currentAnalyzer);
+        		
+        		IndexWriterConfig indexConfig = new IndexWriterConfig(analyzer);
+        		
+        		indexConfig.setSimilarity(new ClassicSimilarity());
+        		//indexConfig.setSimilarity(new BM25Similarity());
+        		//indexConfig.setSimilarity(new MultiSimilarity(new Similarity[]{new BM25Similarity(),new ClassicSimilarity()}));
+        		
+        		indexConfig.setOpenMode(OpenMode.CREATE);
+        		
+        		IndexWriter indexWriter = new IndexWriter(indexDir, indexConfig);
+        		
+        		indexData(indexWriter, datasetDirectory);
+        		
+        		indexWriter.forceMerge(1);
+        		
+        		indexWriter.close();
+        		
+        		Date endTime = new Date();
+        		System.out.println("Completed Indexing in "+(endTime.getTime() - startTime.getTime()) +" milliseconds");
+        		System.out.println("=========================================================");
+        	}
+//            Directory englishIndexDir = FSDirectory.open(Paths.get(englishIndexPath));
+//            Directory standardIndexDir = FSDirectory.open(Paths.get(standardIndexPath));
+//
+//            //Analyzer analyzer = new SimpleAnalyzer();
+//            //Analyzer analyzer = new WhitespaceAnalyzer();
+//            Analyzer standardAnalyzer = new StandardAnalyzer();
+//            Analyzer englishAnalyser = new EnglishAnalyzer();
+//
+//			IndexWriterConfig indexWriterConfigEnglish = new IndexWriterConfig(englishAnalyser);
+//            IndexWriterConfig indexWriterConfigStandard = new IndexWriterConfig(standardAnalyzer);
+//
+//            //BM25 Similarity
+//            //iwc.setSimilarity(new BM25Similarity());
+//
+//            //Classic Similarity
+//            //iwc.setSimilarity(new ClassicSimilarity());
+//
+//            //LMDirichletSimilarity
+//            //iwc.setSimilarity(new LMDirichletSimilarity());
+//
+//            //Trying a multi similarity model
+//            indexWriterConfigEnglish.setSimilarity(new MultiSimilarity(new Similarity[]{new BM25Similarity(),new ClassicSimilarity()}));
+//            indexWriterConfigStandard.setSimilarity(new MultiSimilarity(new Similarity[]{new BM25Similarity(),new ClassicSimilarity()}));
+//
+//            //Trying another multi similarity model
+//            //iwc.setSimilarity(new MultiSimilarity(new Similarity[]{new BM25Similarity(),new LMDirichletSimilarity()}));
+//
+//            //Trying another multi similarity model
+//            //iwc.setSimilarity(new MultiSimilarity(new Similarity[]{new ClassicSimilarity(),new LMDirichletSimilarity()}));
+//
+//            indexWriterConfigEnglish.setOpenMode(OpenMode.CREATE);
+//            indexWriterConfigStandard.setOpenMode(OpenMode.CREATE);
+//
+//            IndexWriter indexWriterEnglish = new IndexWriter(englishIndexDir, indexWriterConfigEnglish);
+//            IndexWriter indexWriterStandard = new IndexWriter(standardIndexDir, indexWriterConfigStandard);
+//            
+//            indexDoc(indexWriterEnglish, datasetDirectory);
+//            indexDoc(indexWriterStandard, datasetDirectory);
+//
+//            //Using writer.forceMerge to maximise search performance.
+//            indexWriterEnglish.forceMerge(1);
+//            indexWriterStandard.forceMerge(1);
+//
+//            indexWriterEnglish.close();
+//            indexWriterStandard.close();
+//
+//            Date end = new Date();
+//            System.out.println(end.getTime() - start.getTime() + " total milliseconds");
 
         } catch (IOException e) {
             System.out.println(" caught a " + e.getClass() + "\n with message: " + e.getMessage());
         }
     }
 
-    /** Indexes the 'cran.all.1400' file */
-    static void indexDoc(IndexWriter writer, Path file) throws IOException {
+    private static void indexData(IndexWriter writer, Path file) throws IOException {
         try (InputStream stream = Files.newInputStream(file)) {
 
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
-            Boolean first = true;
-            System.out.println("Indexing documents.");
 
             String currentLine = bufferedReader.readLine();
             String fullText = "";
-            System.out.println(currentLine);
             while(currentLine != null){
                 Document doc = new Document();
                 if(currentLine.startsWith(".I")){
-                    /*
-                     * I think the ID of the document does not make sense to be analysed,
-                     * hence it is just directly stored without any analysis.
-                     */
-                    doc.add(new StringField("id", currentLine.substring(3), Field.Store.YES));
+                    doc.add(new StringField("DocumentID", currentLine.substring(3), Field.Store.YES));
                     currentLine = bufferedReader.readLine();
                 }
                 if (currentLine.startsWith(".T")){
@@ -121,7 +165,7 @@ public class DocumentIndexer {
                         fullText += currentLine + " ";
                         currentLine = bufferedReader.readLine();
                     }
-                    doc.add(new TextField("title", fullText, Field.Store.YES));
+                    doc.add(new TextField("DocumentTitle", fullText, Field.Store.YES));
                     fullText = "";
                 }
                 if (currentLine.startsWith(".A")){
@@ -130,7 +174,7 @@ public class DocumentIndexer {
                         fullText += currentLine + " ";
                         currentLine = bufferedReader.readLine();
                     }
-                    doc.add(new TextField("author", fullText, Field.Store.YES));
+                    doc.add(new TextField("DocumentAuthour", fullText, Field.Store.YES));
                     fullText = "";
                 }
                 if (currentLine.startsWith(".B")){
@@ -139,11 +183,7 @@ public class DocumentIndexer {
                         fullText += currentLine + " ";
                         currentLine = bufferedReader.readLine();
                     }
-                    /*
-                     * After a bit of analysis, I found that for this dataset, analysing
-                     * and storing bibliography details proved to be slightly inefficient.
-                     */
-                    doc.add(new StringField("bibliography", fullText, Field.Store.YES));
+                    doc.add(new StringField("DocumentBibliography", fullText, Field.Store.YES));
                     fullText = "";
                 }
                 if (currentLine.startsWith(".W")){
@@ -152,8 +192,7 @@ public class DocumentIndexer {
                         fullText += currentLine + " ";
                         currentLine = bufferedReader.readLine();
                     }
-                    //Not storing the words in an attempt to save storage space.
-                    doc.add(new TextField("words", fullText, Field.Store.NO));
+                    doc.add(new TextField("DocumentWords", fullText, Field.Store.YES));
                     fullText = "";
                 }
                 writer.addDocument(doc);
